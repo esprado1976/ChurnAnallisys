@@ -1,0 +1,59 @@
+/**
+ * Automatización de Retención de Clientes
+ */
+
+function procesarRetencion() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Data");
+  const data = sheet.getDataRange().getValues();
+  const soporteEmail = "soporte_especial@tuempresa.com"; // CAMBIAR ESTO
+  
+  let listaServicio = [];
+  
+  // Encabezados: [0] Prob, [1] Pred, [2] ID, [3] Tenure, [4] Monthly, [5] TechSupp, [6] Trigger
+  for (let i = 1; i < data.length; i++) {
+    let row = data[i];
+    let prob = row[0];
+    let clienteID = row[2];
+    let precioActual = row[4];
+    let trigger = row[6];
+    
+    if (prob > 0.85) {
+      
+      if (trigger === "Precio") {
+        enviarOfertaPrecio(clienteID, precioActual);
+      } 
+      else if (trigger === "Servicio") {
+        listaServicio.push("- Cliente: " + clienteID + " (Cargos: $" + precioActual + ")");
+      }
+    }
+  }
+  
+  // Enviar reporte consolidado a Soporte Técnico
+  if (listaServicio.length > 0) {
+    let cuerpoSoporte = "Hola Equipo de Gestiones Especiales,\n\n" +
+                        "Se han detectado clientes con alto riesgo de fuga por temas de SERVICIO:\n\n" +
+                        listaServicio.join("\n") + 
+                        "\n\nPor favor, contactarlos a la brevedad.";
+    MailApp.sendEmail(soporteEmail, "ALERTA: Clientes Críticos - Riesgo de Servicio", cuerpoSoporte);
+  }
+}
+
+function enviarOfertaPrecio(id, precio) {
+  // REGLA MÓVIL: Si paga más de 80, descuento del 30%. Si paga menos, 15%.
+  let descuento = precio > 80 ? 0.30 : 0.15;
+  let nuevoPrecio = (precio * (1 - descuento)).toFixed(2);
+  let pctTexto = (descuento * 100) + "%";
+  
+  let asunto = "Mejoramos tu plan en TuEmpresa";
+  let cuerpo = "Hola " + id + ",\n\n" +
+               "Queremos que sigas con nosotros. Hemos analizado tu cuenta y te ofrecemos un descuento exclusivo del " + pctTexto + ".\n" +
+               "Tu nuevo abono mensual será de $" + nuevoPrecio + " por los próximos 6 meses.\n\n" +
+               "No tienes que hacer nada, se aplicará en tu próxima factura.";
+  
+  // En este ejemplo usamos el ID como email para demostración
+  // En producción, aquí iría la columna de email del cliente
+  let emailSimulado = id + "@ejemplo.com"; 
+  
+  console.log("Enviando oferta a " + id + ": Nuevo precio $" + nuevoPrecio);
+  MailApp.sendEmail(emailSimulado, asunto, cuerpo);
+}
